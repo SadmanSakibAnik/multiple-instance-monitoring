@@ -1,0 +1,25 @@
+discord_webhook: "https://discord.com/api/webhooks/1425368447646302360/KBI-cr8udDdsIGko-CPWhzTU59Qw9EZ39wnLYWNaF58LvTmIefCpMfYVLSCbWVdhKsg-"
+prometheus_url: "http://10.70.34.180:9090"
+check_interval: 30        # seconds
+summary_interval: 180      # seconds
+
+metrics:
+  cpu:
+    # Group by exported_instance if available, otherwise fallback to instance
+    query: '(1 - avg(rate(node_cpu_seconds_total{mode="idle"}[2m])) by (exported_instance)) * 100'
+    max: 70
+    unit: "%"
+    emoji: "🔥"
+
+  ram:
+    query: '(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100'
+    max: 75
+    unit: "%"
+    emoji: "💾"
+
+  disk:
+    query: '(node_filesystem_size_bytes{fstype!~"tmpfs|overlay"} - node_filesystem_free_bytes{fstype!~"tmpfs|overlay"}) / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"} * 100'
+    max: 80
+    unit: "%"
+    emoji: "💿"
+

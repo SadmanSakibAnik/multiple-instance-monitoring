@@ -1,0 +1,17 @@
+# /etc/systemd/system/push_metrics.service
+[Unit]
+Description=Continuous Prometheus metrics push
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/monitoring/scripts/push_loop.sh
+Restart=always
+RestartSec=5
+User=root
+WorkingDirectory=/opt/monitoring/scripts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

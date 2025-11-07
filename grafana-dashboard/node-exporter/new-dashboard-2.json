@@ -1,0 +1,190 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "prometheus",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "type": "row",
+      "title": "🧠 CPU Overview",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU Usage (%)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "100 - (avg by(exported_instance) (irate(node_cpu_seconds_total{job=\"pushgateway\", exported_job=\"node_exporter\", exported_instance=~\"$instance\", mode=\"idle\"}[5m])) * 100)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": { "mode": "continuous-GrYlRd" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "orange", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        }
+      },
+      "options": { "legend": { "showLegend": true, "placement": "bottom" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU per Core (%)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "100 - (avg by(exported_instance,cpu) (irate(node_cpu_seconds_total{job=\"pushgateway\", exported_job=\"node_exporter\", exported_instance=~\"$instance\", mode=\"idle\"}[5m])) * 100)",
+          "legendFormat": "{{cpu}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "color": { "mode": "palette-classic" } }
+      },
+      "options": { "legend": { "showLegend": true, "placement": "bottom" } }
+    },
+    {
+      "type": "row",
+      "title": "💾 Memory & Disk",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "id": 10
+    },
+    {
+      "type": "stat",
+      "title": "Memory Used (%)",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 10 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "(node_memory_MemTotal_bytes{exported_instance=~\"$instance\"} - node_memory_MemAvailable_bytes{exported_instance=~\"$instance\"}) / node_memory_MemTotal_bytes{exported_instance=~\"$instance\"} * 100",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": { "mode": "continuous-GrYlRd" }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Disk Used (%)",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 10 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "(node_filesystem_size_bytes{exported_instance=~\"$instance\", fstype!~\"tmpfs|overlay\"} - node_filesystem_free_bytes{exported_instance=~\"$instance\", fstype!~\"tmpfs|overlay\"}) / node_filesystem_size_bytes{exported_instance=~\"$instance\", fstype!~\"tmpfs|overlay\"} * 100",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "color": { "mode": "continuous-GrYlRd" } }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory Breakdown (Used / Cache / Free)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        { "expr": "node_memory_MemTotal_bytes{exported_instance=~\"$instance\"} - node_memory_MemAvailable_bytes{exported_instance=~\"$instance\"}", "legendFormat": "Used", "refId": "A" },
+        { "expr": "node_memory_Buffers_bytes{exported_instance=~\"$instance\"} + node_memory_Cached_bytes{exported_instance=~\"$instance\"}", "legendFormat": "Cache", "refId": "B" },
+        { "expr": "node_memory_MemAvailable_bytes{exported_instance=~\"$instance\"}", "legendFormat": "Free", "refId": "C" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "options": { "legend": { "placement": "bottom" } }
+    },
+    {
+      "type": "row",
+      "title": "🌐 Network & IO",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "id": 20
+    },
+    {
+      "type": "timeseries",
+      "title": "Disk I/O (reads/sec, writes/sec)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        { "expr": "irate(node_disk_reads_completed_total{exported_instance=~\"$instance\"}[5m])", "legendFormat": "Reads", "refId": "A" },
+        { "expr": "irate(node_disk_writes_completed_total{exported_instance=~\"$instance\"}[5m])", "legendFormat": "Writes", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "iops" } },
+      "options": { "legend": { "placement": "bottom" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Network Traffic (RX/TX)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum by(device) (irate(node_network_receive_bytes_total{exported_instance=~\"$instance\", device!~\"lo\"}[5m]))",
+          "legendFormat": "RX {{device}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by(device) (irate(node_network_transmit_bytes_total{exported_instance=~\"$instance\", device!~\"lo\"}[5m]))",
+          "legendFormat": "TX {{device}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Bps" } },
+      "options": { "legend": { "placement": "bottom" } }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "instance",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "query": "label_values(node_cpu_seconds_total, exported_instance)",
+        "includeAll": true,
+        "refresh": 2,
+        "multi": false,
+        "label": "Instance",
+        "current": { "text": "All", "value": ".*" }
+      }
+    ]
+  },
+  "time": { "from": "now-15m", "to": "now" },
+  "title": "🧩 Node Exporter — Per Instance Dashboard",
+  "uid": "nodeexp_instance_view",
+  "version": 2
+}
+
