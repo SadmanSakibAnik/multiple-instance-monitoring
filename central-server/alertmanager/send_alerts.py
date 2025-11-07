@@ -38,13 +38,13 @@ def main():
     webhook_url = config["discord_webhook"]
     prometheus_url = config["prometheus_url"]
 
-    # 🔹 Intervals
-    interval = config.get("check_interval", 60)         # Metrics collection frequency
-    summary_interval = config.get("summary_interval", 180)  # Summary alert frequency (seconds)
+    # intervals
+    interval = config.get("check_interval", 60)
+    summary_interval = config.get("summary_interval", 1800)
     last_summary_time = 0
 
     metrics_config = config.get("metrics", {})
-    instance_map = config.get("instance_names", {})  # optional friendly name mapping
+    instance_map = config.get("instance_names", {})
     last_seen = {}
 
     while True:
@@ -52,7 +52,7 @@ def main():
         all_instances = set()
         now = datetime.now().strftime("%I:%M %p")
 
-        # 🔹 Collect metrics dynamically
+        # ---------------- Collect metrics ----------------
         for metric_name, metric_info in metrics_config.items():
             query = metric_info.get("query")
             max_threshold = metric_info.get("max")
@@ -60,7 +60,6 @@ def main():
 
             for r in results:
                 raw_instance = r["metric"].get("exported_instance") or r["metric"].get("instance", "unknown")
-                # Skip IPs if no friendly name mapping
                 if raw_instance.startswith("10.") and raw_instance not in instance_map:
                     continue
                 inst = instance_map.get(raw_instance, raw_instance)
@@ -74,17 +73,17 @@ def main():
                     "emoji": metric_info.get("emoji", "")
                 }
 
-        # 🔍 Detect DOWN servers (no data within 2 intervals)
+        # ---------------- Detect DOWN servers ----------------
         down_instances = []
         for inst, last_time in list(last_seen.items()):
             if time.time() - last_time > (interval * 2):
                 down_instances.append(inst)
                 last_seen.pop(inst, None)
 
-        # 🩺 Build Summary & Alerts
         summary_lines = ["🩺 **Server Health Summary**"]
         alert_lines = []
 
+        # ---------------- Build summary and alerts ----------------
         for inst in sorted(all_instances.union(down_instances)):
             if inst in down_instances:
                 summary_lines.append(f"{inst} — 🔴 DOWN")
@@ -94,7 +93,6 @@ def main():
             instance_metrics = stats.get(inst, {})
             summary_stats = []
 
-            # Ensure all metrics are present, default 0
             for metric_name in metrics_config:
                 data = instance_metrics.get(
                     metric_name,
@@ -106,29 +104,30 @@ def main():
 
             summary_lines.append(f"{inst} — 🟢 UP\n" + " | ".join(summary_stats))
 
-            # ⚠️ Alert if max exceeded
+            # threshold cross check
             for metric_name, data in instance_metrics.items():
                 if data["max"] is not None and data["value"] > data["max"]:
                     alert_msg = (
                         f"⚠️ Alert: {inst}\n"
-                        f"⚠️ {metric_name} {data['value']:.2f}{metrics_config[metric_name].get('unit','')} > "
+                        f"⚠️ {metric_name.upper()} {data['value']:.2f}{metrics_config[metric_name].get('unit','')} > "
                         f"{data['max']}{metrics_config[metric_name].get('unit','')}\n\n"
                         "Current Stats\n" + " | ".join(summary_stats) +
                         f"\n🕒 Today at {now}"
                     )
                     alert_lines.append(alert_msg)
 
-        # -------------------- Summary Interval Check --------------------
+        # ---------------- Send alerts immediately ----------------
+        for alert in alert_lines:
+            send_discord_message(webhook_url, alert)
+
+        # ---------------- Send summary by interval ----------------
         if time.time() - last_summary_time >= summary_interval:
             summary_lines.append(f"🕒 Today at {now}")
             send_discord_message(webhook_url, "\n".join(summary_lines))
-            for alert in alert_lines:
-                send_discord_message(webhook_url, alert)
             last_summary_time = time.time()
-        # -----------------------------------------------------------------
 
+        # sleep before next cycle
         time.sleep(interval)
 
 if __name__ == "__main__":
     main()
-
